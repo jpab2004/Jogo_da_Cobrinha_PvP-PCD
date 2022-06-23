@@ -172,9 +172,14 @@ def update_screen():
 def game_over():
     print('Game Over!')
     
-    pg.draw.rect(dis, reset_background_color, (0, 0, screen_size[0], screen_size[1]))
     reset_msg = 'Aperte ESC para sair do jogo ou R para reiniciar o jogo!'
     reset_text_w, reset_text_h = font_reset.size(reset_msg)
+    
+    reset_square_pos = ((screen_size[0] / 2) - (reset_text_w / 2) - (screen_size[0] * 0.02), (screen_size[1] / 2) - (reset_text_h / 2) - (screen_size[1] * 0.02),
+                         reset_text_w + (screen_size[0] * 0.04), reset_text_h + (screen_size[1] * 0.04))
+    
+    pg.draw.rect(dis, reset_background_color, (0, 0, screen_size[0], screen_size[1]))
+    pg.draw.rect(dis, reset_square_background_color, reset_square_pos)
     
     reset_text_pos = [(screen_size[0] / 2) - (reset_text_w / 2), (screen_size[1] / 2) - (reset_text_h / 2)]
     write_reset(reset_msg, reset_text_pos, reset_text_color)
@@ -377,7 +382,7 @@ while True:
                 break
     
     for e in pg.event.get():
-        if e.type != MOUSEBUTTONDOWN:
+        if e.type != pg.MOUSEBUTTONDOWN:
             print('Throwaway!')
 
     head = update_dir(dir)
