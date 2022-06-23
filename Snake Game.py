@@ -32,11 +32,15 @@ game = np.zeros((row, col))
 head = [0, 2]
 game[head[0]][head[1]] = 2
 
+blocks = []
+block_limit = 5
+
 black = (0, 0, 0)
 white = (255, 255, 255)
 red = (255, 0, 0)
 blue = (50, 50, 255)
 pink = (255, 50, 255)
+grey = (117, 117, 117)
 
 tail = []
 
@@ -60,6 +64,8 @@ def find_cor(n):
         return pink
     elif n == -1:
         return red
+    elif n == -2:
+        return grey
 
 def line(start, end, color):
     pg.draw.line(dis, color, start, end, 2)
@@ -87,6 +93,10 @@ def matrix():
 
 def turn_m():
     game2 = np.char.mod('%s', game)
+
+    for i in range(block_limit):
+        game2 = np.char.replace(game2, '-2', 'B')
+
     game2 = np.char.replace(game2, '2', 'O')
     game2 = np.char.replace(game2, '0', ' ')
     game2 = np.char.replace(game2, '-1', 'A')
@@ -155,7 +165,7 @@ def update(dir):
         new_col = 0
 
     destiny = game[new_row][new_col]
-    if destiny == 1:
+    if destiny == 1 or destiny == -2:
         game_over()
     if destiny == -1:
         elong_tail()
@@ -169,6 +179,24 @@ def update(dir):
     print(tb(game))
     return head_new
 
+def create_block(pos):
+    x = pos[0]
+    y = pos[1]
+    box_row = int(y / square_h)
+    box_column = int(x / square_w)
+    
+    print(f'X value: {x}\nY value: {y}\n\nBox: [{box_row},{box_column}]')
+
+    if len(blocks) < block_limit:
+        game[box_row][box_column] = -2
+        blocks.append([box_row, box_column])
+    else:
+        remove = blocks.pop(0)
+        game[remove[0]][remove[1]] = 0
+        game[box_row][box_column] = -2
+        blocks.append([box_row, box_column])
+        
+        
 
 create_apple()
 print(tb(game))
@@ -177,6 +205,9 @@ t.sleep(clock)
 
 while True:
     for e in pg.event.get():
+        if e.type == pg.MOUSEBUTTONDOWN:
+            create_block(pg.mouse.get_pos())
+            break
         if e.type == pg.KEYDOWN:
             if e.key == pg.K_q:
                 print('Game closed!')
