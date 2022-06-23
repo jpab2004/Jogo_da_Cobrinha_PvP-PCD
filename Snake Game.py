@@ -294,6 +294,10 @@ def check_if_head(box_row, box_column):
 def create_block(pos):
     x = pos[0]
     y = pos[1]
+
+    if x > dis_width or y > dis_height:
+        return
+    
     box_row = int(y / square_h)
     box_column = int(x / square_w)
     
