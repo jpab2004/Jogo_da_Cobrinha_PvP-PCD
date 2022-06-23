@@ -33,7 +33,7 @@ head = [0, 2]
 game[head[0]][head[1]] = 2
 
 blocks = []
-block_limit = 10
+block_limit = 5
 
 black = (0, 0, 0)
 white = (255, 255, 255)
