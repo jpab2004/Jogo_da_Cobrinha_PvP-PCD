@@ -33,7 +33,7 @@ head = [0, 2]
 game[head[0]][head[1]] = 2
 
 blocks = []
-block_limit = 5
+block_limit = 10
 
 black = (0, 0, 0)
 white = (255, 255, 255)
@@ -185,7 +185,10 @@ def create_block(pos):
     box_row = int(y / square_h)
     box_column = int(x / square_w)
     
-    print(f'X value: {x}\nY value: {y}\n\nBox: [{box_row},{box_column}]')
+    #print(f'X value: {x}\nY value: {y}\n\nBox: [{box_row},{box_column}]')
+
+    if game[box_row][box_column] != 0:
+        return
 
     if len(blocks) < block_limit:
         game[box_row][box_column] = -2
