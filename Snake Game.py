@@ -24,7 +24,7 @@ square_w, square_h = dis_width / col, dis_height / row
 clock = (zoom/10000)**(1/2)
 
 IA = False
-back_line = True
+back_line = False
 
 font_scale = 1
 if row < col:
@@ -38,9 +38,11 @@ pg.display.set_caption('Jogo da Cobrinha!')
 #font_style = pg.font.SysFont('Time New Roman', int(dis_width * font_scale))
 font_game = pg.font.SysFont('Comic Sans MS', font_size)
 font_score = pg.font.SysFont('Comic Sans MS', int(750 * (1 - game_percentage)))
+font_reset = pg.font.SysFont('Comic Sans MS', int(screen_size[1] * 0.05))
 
 game = np.zeros((row, col))
-head = [0, 2]
+initial_head_pos = [int(row / 2), int(col / 2)]
+head = initial_head_pos
 game[head[0]][head[1]] = 2
 
 blocks = []
@@ -51,32 +53,31 @@ placed_blocks = 0
 
 score = 0
 apple_position = []
+tail = []
+dir = 1
 
-background_color = (0, 0, 0)
+background_color = (30, 30, 30)
+apple_color = (255, 0, 0)
+tail_color = (50, 50, 255)
+head_color = (255, 50, 255)
+block_color = (117, 117, 117)
+score_color = (255, 255, 50)
+reset_background_color = (75, 147, 219)
+reset_square_background_color = (30, 30, 30)
+reset_text_color = (140, 245, 148)
 
 if back_line:
     line_color = (55, 55, 55)
 else:
     line_color = background_color
 
-apple_color = (255, 0, 0)
-tail_color = (50, 50, 255)
-head_color = (255, 50, 255)
-block_color = (117, 117, 117)
-score_color = (255, 255, 50)
-
-tail = []
-
 def create_tail(n):
     for i in range(1, n + 1):
         tail.append([head[0], head[1] - i])
 
-create_tail(2)
-
-for i in tail:
-    game[i[0]][i[1]] = 1
-
-dir = 1
+def show_tail():
+    for i in tail:
+        game[i[0]][i[1]] = 1
 
 def find_cor(n):
     if n == 0:
@@ -101,6 +102,11 @@ def write_game(mesg, pos, cor):
     
 def write_score(mesg, pos, cor):
     msg = font_score.render(mesg, True, cor)
+    dis.blit(msg, pos)
+    return
+    
+def write_reset(mesg, pos, cor):
+    msg = font_reset.render(mesg, True, cor)
     dis.blit(msg, pos)
     return
 
@@ -149,6 +155,7 @@ def turn_m():
 def update_screen():
     matrix()
     draw_score()
+    
     gameDis = turn_m()
     for i in range(row):
         for j in range(col):
@@ -164,8 +171,27 @@ def update_screen():
 
 def game_over():
     print('Game Over!')
-    pg.quit()
-    sys.exit()
+    
+    pg.draw.rect(dis, reset_background_color, (0, 0, screen_size[0], screen_size[1]))
+    reset_msg = 'Aperte ESC para sair do jogo ou R para reiniciar o jogo!'
+    reset_text_w, reset_text_h = font_reset.size(reset_msg)
+    
+    reset_text_pos = [(screen_size[0] / 2) - (reset_text_w / 2), (screen_size[1] / 2) - (reset_text_h / 2)]
+    write_reset(reset_msg, reset_text_pos, reset_text_color)
+    
+    pg.display.update()
+    
+    while True:
+        for e in pg.event.get():
+            if e.type == pg.KEYDOWN:
+                if e.key == pg.K_ESCAPE:
+                    pg.quit()
+                    sys.exit()
+                elif e.key == pg.K_r:
+                    reset_game()
+                    update_screen()
+                    return
+        t.sleep(clock)
     
 def remove_around_apple(row, column):
     for y in range(-block_apple_radius, block_apple_radius + 1):
@@ -226,6 +252,7 @@ def update_dir(dir):
     destiny = game[new_row][new_col]
     if destiny == 1 or destiny == -2:
         game_over()
+        return initial_head_pos
     if destiny == -1:
         elong_tail()
         global score
@@ -292,11 +319,32 @@ def create_block(pos):
     global placed_blocks 
     placed_blocks += 1
         
-        
 
-create_apple()
+def reset_game():
+    global game, head, blocks, placed_blocks, score, apple_position, tail, dir
+    game = np.zeros((row, col))
+    head = initial_head_pos
+    game[head[0]][head[1]] = 2
+
+    blocks = []
+    placed_blocks = 0
+    
+    score = 0
+    apple_position = []
+    tail = []
+    dir = 1
+
+    create_tail(2)
+    show_tail()
+    
+    create_apple()
+    
+    update_screen()
+    pg.display.update()
+    t.sleep(1)
+
+reset_game()
 print(tb(game))
-update_screen()
 t.sleep(clock)
 
 while True:
@@ -305,6 +353,8 @@ while True:
             create_block(pg.mouse.get_pos())
             break
         if e.type == pg.KEYDOWN:
+            if e.key == pg.K_r:
+                reset_game()
             if e.key == pg.K_ESCAPE:
                 print('Game closed!')
                 pg.quit()
@@ -323,7 +373,8 @@ while True:
                 break
     
     for e in pg.event.get():
-        print('Throwaway!')
+        if e.type != MOUSEBUTTONDOWN:
+            print('Throwaway!')
 
     head = update_dir(dir)
     update_screen()
