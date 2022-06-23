@@ -10,6 +10,7 @@ pg.init()
 flags = pg.SHOWN | pg.NOFRAME | pg.FULLSCREEN
 dis_width, dis_height = 1920, 1080
 col, row = int(dis_width / 100), int(dis_height / 100)
+#col, row = 30, 30
 square_w, square_h = dis_width / col, dis_height / row
 clock = 0.2
 
@@ -46,7 +47,7 @@ def create_tail(n):
 create_tail(2)
 
 for i in tail:
-        game[i[0]][i[1]] = 1
+    game[i[0]][i[1]] = 1
 
 dir = 1
 
@@ -84,11 +85,21 @@ def matrix():
 
     return
 
+def turn_m():
+    game2 = np.char.mod('%s', game)
+    game2 = np.char.replace(game2, '2', 'O')
+    game2 = np.char.replace(game2, '0', ' ')
+    game2 = np.char.replace(game2, '-1', 'A')
+    game2 = np.char.replace(game2, '1', 'o')
+    return game2
+
 def update_m():
     matrix()
+    gameDis = turn_m()
     for i in range(row):
         for j in range(col):
-            msg = '%i' % game[i][j]
+            msg = '%s' % gameDis[i][j]
+            msg = msg[:-2]
             text_w, text_h = font_style.size(msg)
 
             cor = find_cor(game[i][j])
