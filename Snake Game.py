@@ -3,18 +3,28 @@ import random as rd
 import pygame as pg
 import numpy as np
 import time as t
+import pyautogui
 import sys
 
 pg.init()
 
 flags = pg.SHOWN | pg.NOFRAME | pg.FULLSCREEN
-dis_width, dis_height = 1920, 1080
-col, row = int(dis_width / 100), int(dis_height / 100)
+
+screen_size = pyautogui.size()
+
+dis_width, dis_height = screen_size
+game_percentage = 0.93
+dis_height *= game_percentage
+
+zoom = 45
+
+col, row = int(dis_width / zoom), int(dis_height / zoom)
 #col, row = 30, 30
 square_w, square_h = dis_width / col, dis_height / row
-clock = 0.2
+clock = (zoom/10000)**(1/2)
 
 IA = False
+back_line = True
 
 font_scale = 1
 if row < col:
@@ -26,7 +36,8 @@ dis = pg.display.set_mode((dis_width, dis_height), flags)
 pg.display.set_caption('Jogo da Cobrinha!')
 
 #font_style = pg.font.SysFont('Time New Roman', int(dis_width * font_scale))
-font_style = pg.font.SysFont('Comic Sans MS', font_size)
+font_game = pg.font.SysFont('Comic Sans MS', font_size)
+font_score = pg.font.SysFont('Comic Sans MS', int(750 * (1 - game_percentage)))
 
 game = np.zeros((row, col))
 head = [0, 2]
@@ -34,13 +45,25 @@ game[head[0]][head[1]] = 2
 
 blocks = []
 block_limit = 5
+block_apple_radius = 1
+block_head_radius = 2
+placed_blocks = 0
 
-black = (0, 0, 0)
-white = (255, 255, 255)
-red = (255, 0, 0)
-blue = (50, 50, 255)
-pink = (255, 50, 255)
-grey = (117, 117, 117)
+score = 0
+apple_position = []
+
+background_color = (0, 0, 0)
+
+if back_line:
+    line_color = (55, 55, 55)
+else:
+    line_color = background_color
+
+apple_color = (255, 0, 0)
+tail_color = (50, 50, 255)
+head_color = (255, 50, 255)
+block_color = (117, 117, 117)
+score_color = (255, 255, 50)
 
 tail = []
 
@@ -57,71 +80,101 @@ dir = 1
 
 def find_cor(n):
     if n == 0:
-        return white
+        return background_color
     elif n == 1:
-        return blue
+        return tail_color
     elif n == 2:
-        return pink
+        return head_color
     elif n == -1:
-        return red
+        return apple_color
     elif n == -2:
-        return grey
+        return block_color
 
 def line(start, end, color):
     pg.draw.line(dis, color, start, end, 2)
     return
 
-def write_s(mesg, pos, cor):
-    msg = font_style.render(mesg, True, cor)
+def write_game(mesg, pos, cor):
+    msg = font_game.render(mesg, True, cor)
+    dis.blit(msg, pos)
+    return
+    
+def write_score(mesg, pos, cor):
+    msg = font_score.render(mesg, True, cor)
     dis.blit(msg, pos)
     return
 
 def matrix():
-    pg.draw.rect(dis, black, (0, 0, dis_width, dis_height))
+    pg.draw.rect(dis, background_color, (0, 0, screen_size[0], screen_size[1]))
 
     for i in range(1, row):
         start = (0, square_h * i)
         end = (dis_width, square_h * i)
-        line(start, end, white)
+        line(start, end, line_color)
     
     for i in range(1, col):
         start = (square_w * i, 0)
         end = (square_w * i, dis_height)
-        line(start, end, white)
+        line(start, end, line_color)
 
     return
+    
+def draw_score():
+    score_msg = f'Score: {score}'
+    block_score = f'Blocos colocados: {placed_blocks}'
+    
+    score_w, score_h = font_score.size(score_msg)
+    block_score_w, block_score_h = font_score.size(block_score)
+    
+    pos = [screen_size[0] * 0.01, (screen_size[1] * (game_percentage + (1 - game_percentage) / 2)) - (score_h / 2)]
+    pos_block_score = [screen_size[0] - block_score_w - screen_size[0] * 0.01, (screen_size[1] * (game_percentage + (1 - game_percentage) / 2)) - (block_score_h / 2)]
+    
+    write_score(score_msg, pos, score_color)
+    write_score(block_score, pos_block_score, score_color)
+    
+    line([0,dis_height], [dis_width, dis_height], (255, 255, 255))
 
 def turn_m():
     game2 = np.char.mod('%s', game)
 
     for i in range(block_limit):
-        game2 = np.char.replace(game2, '-2', 'B')
+        game2 = np.char.replace(game2, '-2', '#')
 
     game2 = np.char.replace(game2, '2', 'O')
     game2 = np.char.replace(game2, '0', ' ')
-    game2 = np.char.replace(game2, '-1', 'A')
+    game2 = np.char.replace(game2, '-1', '©')
     game2 = np.char.replace(game2, '1', 'o')
     return game2
 
-def update_m():
+def update_screen():
     matrix()
+    draw_score()
     gameDis = turn_m()
     for i in range(row):
         for j in range(col):
             msg = '%s' % gameDis[i][j]
             msg = msg[:-2]
-            text_w, text_h = font_style.size(msg)
+            text_w, text_h = font_game.size(msg)
 
             cor = find_cor(game[i][j])
 
             pos = [(square_w * j) + (square_w / 2) - (text_w / 2), (square_h * i) + (square_h / 2) - (text_h / 2)]
-            write_s(msg, pos, cor)
+            write_game(msg, pos, cor)
     pg.display.update()
 
 def game_over():
     print('Game Over!')
     pg.quit()
     sys.exit()
+    
+def remove_around_apple(row, column):
+    for y in range(-block_apple_radius, block_apple_radius + 1):
+        for x in range(-block_apple_radius, block_apple_radius + 1):
+            try:
+                if game[row + x][column + y] == -2:
+                    game[row + x][column + y] = 0
+            except:
+                continue
 
 def create_apple():
     rdr = rd.randint(0, row - 1)
@@ -129,6 +182,12 @@ def create_apple():
     while(game[rdr][rdc] != 0):
         rdr = rd.randint(0, row - 1)
         rdc = rd.randint(0, col - 1)
+        
+    remove_around_apple(rdr, rdc)
+        
+    global apple_position
+    apple_position = [rdr, rdc]
+        
     game[rdr][rdc] = -1
 
 def elong_tail():
@@ -141,7 +200,7 @@ def update_tail(head):
     for i in tail:
         game[i[0]][i[1]] = 1
 
-def update(dir):
+def update_dir(dir):
     if dir == 0:
         new_row = head[0] - 1
         new_col = head[1]
@@ -169,6 +228,8 @@ def update(dir):
         game_over()
     if destiny == -1:
         elong_tail()
+        global score
+        score += 1
         create_apple()
     
     head_new = [new_row, new_col]
@@ -178,6 +239,30 @@ def update(dir):
     game[head_new[0]][head_new[1]] = 2
     print(tb(game))
     return head_new
+
+def check_if_apple(box_row, box_column):
+    x_apple = apple_position[0]
+    y_apple = apple_position[1]
+    
+    for y in range(-block_apple_radius, block_apple_radius + 1):
+        for x in range(-block_apple_radius, block_apple_radius + 1):
+            try:
+                if x_apple + x == box_row and y_apple + y == box_column:
+                    return True
+            except:
+                continue
+                
+def check_if_head(box_row, box_column):
+    x_head = head[0]
+    y_head = head[1]
+    
+    for y in range(-block_head_radius, block_head_radius + 1):
+        for x in range(-block_head_radius, block_head_radius + 1):
+            try:
+                if x_head + x == box_row and y_head + y == box_column:
+                    return True
+            except:
+                continue
 
 def create_block(pos):
     x = pos[0]
@@ -189,6 +274,12 @@ def create_block(pos):
 
     if game[box_row][box_column] != 0:
         return
+        
+    if check_if_apple(box_row, box_column):
+        return
+    
+    if check_if_head(box_row, box_column):
+        return
 
     if len(blocks) < block_limit:
         game[box_row][box_column] = -2
@@ -198,12 +289,14 @@ def create_block(pos):
         game[remove[0]][remove[1]] = 0
         game[box_row][box_column] = -2
         blocks.append([box_row, box_column])
+    global placed_blocks 
+    placed_blocks += 1
         
         
 
 create_apple()
 print(tb(game))
-update_m()
+update_screen()
 t.sleep(clock)
 
 while True:
@@ -212,7 +305,7 @@ while True:
             create_block(pg.mouse.get_pos())
             break
         if e.type == pg.KEYDOWN:
-            if e.key == pg.K_q:
+            if e.key == pg.K_ESCAPE:
                 print('Game closed!')
                 pg.quit()
                 sys.exit()
@@ -232,8 +325,8 @@ while True:
     for e in pg.event.get():
         print('Throwaway!')
 
-    head = update(dir)
-    update_m()
+    head = update_dir(dir)
+    update_screen()
 
     if IA:
         clock = 1 / (len(tail) + 1)
